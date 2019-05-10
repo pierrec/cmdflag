@@ -8,9 +8,59 @@ import (
 	"github.com/pierrec/cmdflag"
 )
 
-func TestGlobalFlagOnly(t *testing.T) {
+func prepareArgs() (done func()) {
 	cmd, args := flag.CommandLine, os.Args
-	defer func() { flag.CommandLine, os.Args = cmd, args }()
+	return func() { flag.CommandLine, os.Args = cmd, args }
+}
+
+func TestCommand_Add(t *testing.T) {
+	defer prepareArgs()()
+
+	ini := func(*flag.FlagSet) cmdflag.Initializer {
+		return func(s ...string) error {
+			return nil
+		}
+	}
+
+	apps := func(app ...cmdflag.Application) []cmdflag.Application { return app }
+	for _, tcase := range []struct {
+		label string
+		app   []cmdflag.Application
+		err   error
+	}{
+		{label: "missing command", err: cmdflag.ErrMissingCommandName},
+		{label: "missing initializer", err: cmdflag.ErrMissingInitializer,
+			app: apps(cmdflag.Application{Name: "test"})},
+		{label: "duplicate command", err: cmdflag.ErrDuplicateCommand,
+			app: apps(cmdflag.Application{Name: "test", Init: ini}, cmdflag.Application{Name: "test", Init: ini})},
+		{label: "cmd1 cmd2", err: cmdflag.ErrDuplicateCommand,
+			app: apps(cmdflag.Application{Name: "cmd1", Init: ini}, cmdflag.Application{Name: "cmd2", Init: ini})},
+	} {
+		t.Run(tcase.label, func(t *testing.T) {
+			var c cmdflag.Command
+			var cmds []*cmdflag.Command
+			for _, app := range tcase.app {
+				cc, err := c.Add(app)
+				if err != nil {
+					if tcase.err == nil {
+						t.Fatal(err)
+					}
+					if got, want := err, tcase.err; got != want {
+						t.Fatalf("got %#v; want %#v", got, want)
+					}
+					return
+				}
+				cmds = append(cmds, cc)
+			}
+			if got, want := len(c.Commands()), len(cmds); got != want {
+				t.Fatalf("got %#v; want %#v", got, want)
+			}
+		})
+	}
+}
+
+func TestGlobalFlagOnly(t *testing.T) {
+	defer prepareArgs()()
 
 	flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
 	var gv1 string
@@ -27,8 +77,7 @@ func TestGlobalFlagOnly(t *testing.T) {
 }
 
 func TestInvalidcmdflag(t *testing.T) {
-	cmd, args := flag.CommandLine, os.Args
-	defer func() { flag.CommandLine, os.Args = cmd, args }()
+	defer prepareArgs()()
 
 	flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
 	os.Args = []string{"program", "invalidsub"}
@@ -39,8 +88,10 @@ func TestInvalidcmdflag(t *testing.T) {
 }
 
 func TestOnecmdflag(t *testing.T) {
+	defer prepareArgs()()
+
 	h1 := 0
-	handle1 := func(fset *flag.FlagSet) cmdflag.Handler {
+	handle1 := func(fset *flag.FlagSet) cmdflag.Initializer {
 		return func(args ...string) error {
 			h1++
 			return nil
@@ -52,8 +103,6 @@ func TestOnecmdflag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	args := os.Args
-	defer func() { os.Args = args }()
 	os.Args = []string{"program", "sub1"}
 
 	if err := cmdflag.Parse(); err != nil {
@@ -66,8 +115,10 @@ func TestOnecmdflag(t *testing.T) {
 }
 
 func TestOnecmdflagOneFlag(t *testing.T) {
+	defer prepareArgs()()
+
 	h1 := 0
-	handle1 := func(fset *flag.FlagSet) cmdflag.Handler {
+	handle1 := func(fset *flag.FlagSet) cmdflag.Initializer {
 		h1++
 
 		var v1 string
@@ -86,8 +137,6 @@ func TestOnecmdflagOneFlag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	args := os.Args
-	defer func() { os.Args = args }()
 	os.Args = []string{"program", "sub1flag", "-v1=cli1"}
 
 	if err := cmdflag.Parse(); err != nil {
@@ -100,8 +149,10 @@ func TestOnecmdflagOneFlag(t *testing.T) {
 }
 
 func TestGlobalFlagOnecmdflag(t *testing.T) {
+	defer prepareArgs()()
+
 	h1 := 0
-	handle1 := func(fset *flag.FlagSet) cmdflag.Handler {
+	handle1 := func(fset *flag.FlagSet) cmdflag.Initializer {
 		h1++
 
 		var v1 string
@@ -116,9 +167,6 @@ func TestGlobalFlagOnecmdflag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	cmd, args := flag.CommandLine, os.Args
-	defer func() { flag.CommandLine, os.Args = cmd, args }()
 
 	flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
 	var gv1 string
@@ -140,8 +188,10 @@ func TestGlobalFlagOnecmdflag(t *testing.T) {
 }
 
 func TestGlobalFlagOnecmdflagOneFlag(t *testing.T) {
+	defer prepareArgs()()
+
 	h1 := 0
-	handle1 := func(fset *flag.FlagSet) cmdflag.Handler {
+	handle1 := func(fset *flag.FlagSet) cmdflag.Initializer {
 		h1++
 
 		var v1 string
@@ -159,9 +209,6 @@ func TestGlobalFlagOnecmdflagOneFlag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	cmd, args := flag.CommandLine, os.Args
-	defer func() { flag.CommandLine, os.Args = cmd, args }()
 
 	flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
 	var gv1 string

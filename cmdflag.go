@@ -2,7 +2,7 @@
 // on top of the standard library flag package.
 //
 // It strives to be lightweight (only relying on the standard library) and
-// fit naturally with the usage of the flag package.
+// fits naturally with the usage of the flag package.
 package cmdflag
 
 import (
@@ -43,16 +43,16 @@ type (
 		Args  string                          // Description of the expected arguments
 		Help  string                          // Displayed when used with the help command
 		Err   flag.ErrorHandling              // Arguments error handling
-		Init  func(set *flag.FlagSet) Handler // Initialize the arguments when the command is matched
+		Init  func(*flag.FlagSet) Initializer // Initialize the arguments when the command is matched
 	}
 
-	// Handler is the function called when a matching command is found.
-	Handler func(...string) error
+	// Initializer is the function called when a matching command is found.
+	Initializer func(...string) error
 
 	// Command represents a command line command.
 	Command struct {
 		mu   sync.Mutex
-		subs []*Command
+		subs []*Command // Commands supported by this command
 
 		Application
 	}
@@ -73,10 +73,10 @@ func (c *Command) AddHelp() error {
 // Command names must be unique and non empty.
 func (c *Command) Add(app Application) (*Command, error) {
 	if app.Name == "" {
-		return nil, fmt.Errorf("missing command name")
+		return nil, ErrMissingCommandName
 	}
 	if app.Init == nil {
-		return nil, fmt.Errorf("missing command initializer")
+		return nil, ErrMissingInitializer
 	}
 	sub := &Command{Application: app}
 
@@ -84,14 +84,23 @@ func (c *Command) Add(app Application) (*Command, error) {
 	defer c.mu.Unlock()
 	for _, sub := range c.subs {
 		if name := sub.Application.Name; name == app.Name {
-			return nil, fmt.Errorf("command %s redeclared", name)
+			return nil, ErrDuplicateCommand
 		}
 	}
 	c.subs = append(c.subs, sub)
 	return sub, nil
 }
 
-// Commands returns the commands defined on c.
+// MustAdd is similar to Add but panics if an error is encountered.
+func (c *Command) MustAdd(app Application) *Command {
+	cc, err := c.Add(app)
+	if err != nil {
+		panic(err)
+	}
+	return cc
+}
+
+// Commands returns all the commands defined on c.
 func (c *Command) Commands() []*Command {
 	return c.subs
 }
@@ -100,7 +109,10 @@ func (c *Command) Commands() []*Command {
 //
 // To be called in lieu of flag.Parse().
 //
-// If the VersionBoolFlag is defined as a global boolean flag, then the program version is displayed and the program stops.
+// If the VersionBoolFlag is defined as a global boolean flag, then the program version is displayed and the program
+// stops.
+// If the FullVersionBoolFlag is defined as a global boolean flag, then the full program version is displayed and
+// the program stops.
 func Parse() error {
 	args := os.Args
 	if len(args) == 1 {
@@ -166,12 +178,12 @@ func run(c *Command, args []string, fset *flag.FlagSet, doerror bool) error {
 		if err := handler(args[len(args)-fs.NArg():]...); err != nil {
 			return err
 		}
-
+		// Next command.
 		return run(sub, args, fs, false)
 	}
 
 	if doerror {
-		return fmt.Errorf("%s is not a valid command", s)
+		return ErrNoCommand
 	}
 
 	return nil

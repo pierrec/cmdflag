@@ -8,17 +8,19 @@ import (
 	"strings"
 )
 
+const nobuildinfo = "no version available (not built with module support)"
+
 func buildinfo() string {
 	if bi, ok := debug.ReadBuildInfo(); ok {
 		return bi.Main.Version
 	}
-	return "no version available (not built with module support)"
+	return nobuildinfo
 }
 
 func fullbuildinfo() string {
 	bi, ok := debug.ReadBuildInfo()
 	if !ok {
-		return "no version available (not built with module support)"
+		return nobuildinfo
 	}
 	var buf strings.Builder
 	printModule(&buf, &bi.Main)

@@ -27,7 +27,7 @@ file2_01
 ...
 file2_yy`,
 			Err: flag.ExitOnError,
-			Init: func(fs *flag.FlagSet) cmdflag.Handler {
+			Init: func(fs *flag.FlagSet) cmdflag.Initializer {
 				// Declare the cmdflag specific flags.
 				var s string
 				fs.StringVar(&s, "s", "", "string to be split")

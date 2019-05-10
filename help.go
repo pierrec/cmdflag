@@ -12,12 +12,13 @@ import (
 //   ./myprogram help commandname
 const HelpCommand = "help"
 
+// addHelpCommand adds the `help` command to the Command c.
 func addHelpCommand(c *Command) error {
 	app := Application{
 		Name:  HelpCommand,
 		Descr: "display the help for a given command",
 		Args:  "command",
-		Init: func(set *flag.FlagSet) Handler {
+		Init: func(set *flag.FlagSet) Initializer {
 			return func(args ...string) error {
 				if len(args) == 0 {
 					Usage()

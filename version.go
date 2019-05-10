@@ -14,14 +14,18 @@ const (
 	FullVersionBoolFlag = "fullversion"
 )
 
+// hasBoolFlag returns whether or not the flag with name `name` was defined and set to true.
 func hasBoolFlag(fset *flag.FlagSet, name string) bool {
-	if f := fset.Lookup(name); f != nil {
-		if v, ok := f.Value.(flag.Getter); ok {
-			// All values implemented by the flag package implement the flag.Getter interface.
-			b, ok := v.Get().(bool)
-			// Was the flag was defined as a bool and is set?
-			return ok && b
-		}
+	f := fset.Lookup(name)
+	if f == nil {
+		return false
 	}
-	return false
+	// All values implemented by the flag package implement the flag.Getter interface.
+	v, ok := f.Value.(flag.Getter)
+	if !ok {
+		return false
+	}
+	b, ok := v.Get().(bool)
+	// Was the flag defined as a bool and is it set?
+	return ok && b
 }
