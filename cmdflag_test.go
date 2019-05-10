@@ -28,29 +28,38 @@ func TestCommand_Add(t *testing.T) {
 		app   []cmdflag.Application
 		err   error
 	}{
-		{label: "missing command", err: cmdflag.ErrMissingCommandName},
+		{label: "missing command", err: cmdflag.ErrMissingCommandName,
+			app: apps(cmdflag.Application{})},
 		{label: "missing initializer", err: cmdflag.ErrMissingInitializer,
 			app: apps(cmdflag.Application{Name: "test"})},
 		{label: "duplicate command", err: cmdflag.ErrDuplicateCommand,
 			app: apps(cmdflag.Application{Name: "test", Init: ini}, cmdflag.Application{Name: "test", Init: ini})},
-		{label: "cmd1 cmd2", err: cmdflag.ErrDuplicateCommand,
+		{label: "cmd1 cmd2",
 			app: apps(cmdflag.Application{Name: "cmd1", Init: ini}, cmdflag.Application{Name: "cmd2", Init: ini})},
 	} {
 		t.Run(tcase.label, func(t *testing.T) {
 			var c cmdflag.Command
 			var cmds []*cmdflag.Command
+			var err error
 			for _, app := range tcase.app {
-				cc, err := c.Add(app)
+				var cc *cmdflag.Command
+				cc, err = c.Add(app)
 				if err != nil {
-					if tcase.err == nil {
-						t.Fatal(err)
-					}
-					if got, want := err, tcase.err; got != want {
-						t.Fatalf("got %#v; want %#v", got, want)
-					}
-					return
+					break
 				}
 				cmds = append(cmds, cc)
+			}
+			if err != nil {
+				if tcase.err == nil {
+					t.Fatal(err)
+				}
+				if got, want := err, tcase.err; got != want {
+					t.Fatalf("got %#v; want %#v", got, want)
+				}
+				return
+			}
+			if tcase.err != nil {
+				t.Fatal("expected error not found")
 			}
 			if got, want := len(c.Commands()), len(cmds); got != want {
 				t.Fatalf("got %#v; want %#v", got, want)
