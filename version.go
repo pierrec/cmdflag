@@ -2,6 +2,12 @@ package cmdflag
 
 import (
 	"flag"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 )
 
 const (
@@ -28,4 +34,25 @@ func hasBoolFlag(fset *flag.FlagSet, name string) bool {
 	b, ok := v.Get().(bool)
 	// Was the flag defined as a bool and is it set?
 	return ok && b
+}
+
+// program returns a deterministic name for the running program.
+func program() string {
+	return strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
+}
+
+// version prints out the short version of the running program.
+func version(out io.Writer) {
+	_, _ = fmt.Fprintf(out, "%s version %s %s/%s\n",
+		program(), buildinfo(),
+		runtime.GOOS, runtime.GOARCH)
+}
+
+// fullversion prints out the full version of the running program with compiler and modules info.
+func fullversion(out io.Writer) {
+	_, _ = fmt.Fprintf(out, "%s full version %s %s/%s compiled by %s (%s)\n%s\n",
+		program(), buildinfo(),
+		runtime.GOOS, runtime.GOARCH,
+		runtime.Compiler, runtime.Version(),
+		fullbuildinfo())
 }

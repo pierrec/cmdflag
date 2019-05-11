@@ -1,6 +1,7 @@
 package cmdflag_test
 
 import (
+	"bytes"
 	"flag"
 	"os"
 	"testing"
@@ -8,13 +9,14 @@ import (
 	"github.com/pierrec/cmdflag"
 )
 
-func prepareArgs() (done func()) {
+func restoreArgs() (done func()) {
 	cmd, args := flag.CommandLine, os.Args
+	flag.CommandLine = flag.NewFlagSet("test", 0)
 	return func() { flag.CommandLine, os.Args = cmd, args }
 }
 
 func TestCommand_Add(t *testing.T) {
-	defer prepareArgs()()
+	defer restoreArgs()()
 
 	ini := func(*flag.FlagSet) cmdflag.Initializer {
 		return func(s ...string) error {
@@ -38,7 +40,7 @@ func TestCommand_Add(t *testing.T) {
 			app: apps(cmdflag.Application{Name: "cmd1", Init: ini}, cmdflag.Application{Name: "cmd2", Init: ini})},
 	} {
 		t.Run(tcase.label, func(t *testing.T) {
-			var c cmdflag.Command
+			c := cmdflag.New(nil)
 			var cmds []*cmdflag.Command
 			var err error
 			for _, app := range tcase.app {
@@ -68,15 +70,26 @@ func TestCommand_Add(t *testing.T) {
 	}
 }
 
-func TestGlobalFlagOnly(t *testing.T) {
-	defer prepareArgs()()
+func TestCommand_MustAdd(t *testing.T) {
+	defer restoreArgs()()
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected panic on invalid application")
+		}
+	}()
 
-	flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
+	c := cmdflag.New(nil)
+	c.MustAdd(cmdflag.Application{})
+}
+
+func TestGlobalFlagOnly(t *testing.T) {
+	defer restoreArgs()()
+
 	var gv1 string
 	flag.StringVar(&gv1, "v1", "val1", "usage1")
-	os.Args = []string{"program", "-v1=gcli1"}
 
-	if err := cmdflag.Parse(); err != nil {
+	c := cmdflag.New(nil)
+	if err := c.Parse("-v1=gcli1"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -85,20 +98,57 @@ func TestGlobalFlagOnly(t *testing.T) {
 	}
 }
 
-func TestInvalidcmdflag(t *testing.T) {
-	defer prepareArgs()()
+func TestInvalidCommand(t *testing.T) {
+	defer restoreArgs()()
 
-	flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
-	os.Args = []string{"program", "invalidsub"}
-
-	if err := cmdflag.Parse(); err == nil {
+	c := cmdflag.New(nil)
+	app := cmdflag.Application{
+		Name: "sub1",
+		Init: func(fset *flag.FlagSet) cmdflag.Initializer { return nil },
+	}
+	_, err := c.Add(app)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Parse("invalidsub"); err == nil {
 		t.Fatal("expected invalid command error")
 	}
 }
 
-func TestOnecmdflag(t *testing.T) {
-	defer prepareArgs()()
+func TestNoCommandSet(t *testing.T) {
+	defer restoreArgs()()
 
+	c := cmdflag.New(nil)
+	if err := c.Parse("sub"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestOneCommand(t *testing.T) {
+	h := 0
+	handle := func(fset *flag.FlagSet) cmdflag.Initializer {
+		return func(args ...string) error {
+			h++
+			return nil
+		}
+	}
+	c := cmdflag.New(nil)
+	app := cmdflag.Application{Name: "sub1", Err: flag.ExitOnError, Init: handle}
+	_, err := c.Add(app)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.Parse("sub1"); err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := h, 1; got != want {
+		t.Fatalf("got %d; want %d", got, want)
+	}
+}
+
+func TestOneCommandOneNestedCommand(t *testing.T) {
 	h1 := 0
 	handle1 := func(fset *flag.FlagSet) cmdflag.Initializer {
 		return func(args ...string) error {
@@ -106,25 +156,39 @@ func TestOnecmdflag(t *testing.T) {
 			return nil
 		}
 	}
-	app := cmdflag.Application{Name: "sub1", Err: flag.ExitOnError, Init: handle1}
-	_, err := cmdflag.CommandLine.Add(app)
+	c1 := cmdflag.New(nil)
+	app1 := cmdflag.Application{Name: "sub1", Err: flag.ExitOnError, Init: handle1}
+	c2, err := c1.Add(app1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h2 := 0
+	handle2 := func(fset *flag.FlagSet) cmdflag.Initializer {
+		return func(args ...string) error {
+			h2 += 10
+			return nil
+		}
+	}
+	app2 := cmdflag.Application{Name: "sub2", Err: flag.ExitOnError, Init: handle2}
+	_, err = c2.Add(app2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	os.Args = []string{"program", "sub1"}
-
-	if err := cmdflag.Parse(); err != nil {
+	if err := c1.Parse("sub1", "sub2"); err != nil {
 		t.Fatal(err)
 	}
 
 	if got, want := h1, 1; got != want {
 		t.Fatalf("got %d; want %d", got, want)
 	}
+	if got, want := h2, 10; got != want {
+		t.Fatalf("got %d; want %d", got, want)
+	}
 }
 
-func TestOnecmdflagOneFlag(t *testing.T) {
-	defer prepareArgs()()
+func TestOneCommandOneFlag(t *testing.T) {
+	defer restoreArgs()()
 
 	h1 := 0
 	handle1 := func(fset *flag.FlagSet) cmdflag.Initializer {
@@ -140,15 +204,14 @@ func TestOnecmdflagOneFlag(t *testing.T) {
 			return nil
 		}
 	}
+	c := cmdflag.New(nil)
 	app := cmdflag.Application{Name: "sub1flag", Err: flag.ExitOnError, Init: handle1}
-	_, err := cmdflag.CommandLine.Add(app)
+	_, err := c.Add(app)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	os.Args = []string{"program", "sub1flag", "-v1=cli1"}
-
-	if err := cmdflag.Parse(); err != nil {
+	if err := c.Parse("sub1flag", "-v1=cli1"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -157,8 +220,8 @@ func TestOnecmdflagOneFlag(t *testing.T) {
 	}
 }
 
-func TestGlobalFlagOnecmdflag(t *testing.T) {
-	defer prepareArgs()()
+func TestGlobalFlagOneCommand(t *testing.T) {
+	defer restoreArgs()()
 
 	h1 := 0
 	handle1 := func(fset *flag.FlagSet) cmdflag.Initializer {
@@ -171,19 +234,17 @@ func TestGlobalFlagOnecmdflag(t *testing.T) {
 			return nil
 		}
 	}
+	c := cmdflag.New(nil)
 	app := cmdflag.Application{Name: "subglobal", Err: flag.ExitOnError, Init: handle1}
-	_, err := cmdflag.CommandLine.Add(app)
+	_, err := c.Add(app)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
 	var gv1 string
 	flag.StringVar(&gv1, "v1", "val1", "usage1")
 
-	os.Args = []string{"program", "-v1=gcli1", "subglobal"}
-
-	if err := cmdflag.Parse(); err != nil {
+	if err := c.Parse("-v1=gcli1", "subglobal"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -196,8 +257,8 @@ func TestGlobalFlagOnecmdflag(t *testing.T) {
 	}
 }
 
-func TestGlobalFlagOnecmdflagOneFlag(t *testing.T) {
-	defer prepareArgs()()
+func TestGlobalFlagOneCommandOneFlag(t *testing.T) {
+	defer restoreArgs()()
 
 	h1 := 0
 	handle1 := func(fset *flag.FlagSet) cmdflag.Initializer {
@@ -213,8 +274,9 @@ func TestGlobalFlagOnecmdflagOneFlag(t *testing.T) {
 			return nil
 		}
 	}
+	c := cmdflag.New(nil)
 	app := cmdflag.Application{Name: "subglobal1flag", Err: flag.ExitOnError, Init: handle1}
-	_, err := cmdflag.CommandLine.Add(app)
+	_, err := c.Add(app)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,13 +285,114 @@ func TestGlobalFlagOnecmdflagOneFlag(t *testing.T) {
 	var gv1 string
 	flag.StringVar(&gv1, "v1", "val1", "usage1")
 
-	os.Args = []string{"program", "subglobal1flag", "-v1=cli1"}
-
-	if err := cmdflag.Parse(); err != nil {
+	if err := c.Parse("subglobal1flag", "-v1=cli1"); err != nil {
 		t.Fatal(err)
 	}
 
 	if got, want := h1, 1; got != want {
 		t.Fatalf("got %d; want %d", got, want)
+	}
+}
+
+func TestVersion(t *testing.T) {
+	defer restoreArgs()()
+
+	buf := new(bytes.Buffer)
+	flag.CommandLine.SetOutput(buf)
+	flag.CommandLine.Bool(cmdflag.VersionBoolFlag, false, "print the program version")
+
+	c := cmdflag.New(nil)
+	app := cmdflag.Application{
+		Name: "sub",
+		Err:  flag.ExitOnError,
+		Init: func(fset *flag.FlagSet) cmdflag.Initializer { return nil },
+	}
+	_, err := c.Add(app)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.Parse("-"+cmdflag.VersionBoolFlag+"=false", "dummy"); err != cmdflag.ErrNoCommand {
+		t.Fatal("disabled version flag should error")
+	}
+	if err := c.Parse("-" + cmdflag.VersionBoolFlag); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := buf.Bytes(); !bytes.Contains(got, []byte("version")) {
+		t.Fatal("version flag does not output the version")
+	}
+}
+
+func TestFullVersion(t *testing.T) {
+	defer restoreArgs()()
+
+	buf := new(bytes.Buffer)
+	flag.CommandLine.SetOutput(buf)
+	flag.CommandLine.Bool(cmdflag.FullVersionBoolFlag, false, "print the program version")
+
+	c := cmdflag.New(nil)
+	app := cmdflag.Application{
+		Name: "sub",
+		Err:  flag.ExitOnError,
+		Init: func(fset *flag.FlagSet) cmdflag.Initializer { return nil },
+	}
+	_, err := c.Add(app)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.Parse("-"+cmdflag.FullVersionBoolFlag+"=false", "dummy"); err != cmdflag.ErrNoCommand {
+		t.Fatal("disabled full version flag should error")
+	}
+
+	if err := c.Parse("-" + cmdflag.FullVersionBoolFlag); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := buf.Bytes(); !bytes.Contains(got, []byte("full version")) {
+		t.Fatal("full version flag does not output the full version")
+	}
+}
+
+func TestHelpCommand(t *testing.T) {
+	defer restoreArgs()()
+
+	buf := new(bytes.Buffer)
+	flag.CommandLine.SetOutput(buf)
+
+	c := cmdflag.New(nil)
+	if err := c.AddHelp(); err != nil {
+		t.Fatal(err)
+	}
+	app := cmdflag.Application{
+		Name: "sub",
+		Help: "helpcommand",
+		Err:  flag.ExitOnError,
+		Init: func(fset *flag.FlagSet) cmdflag.Initializer { return nil },
+	}
+	_, err := c.Add(app)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.Parse("help"); err != nil {
+		t.Fatal(err)
+	}
+	if got := buf.Bytes(); !bytes.Contains(got, []byte("Usage")) {
+		t.Fatal("help command with no command does not output the usage")
+	}
+	buf.Truncate(0)
+
+	if err := c.Parse("help", "dummy"); err == nil {
+		t.Fatal("help command should fail on invalid command")
+	}
+
+	if err := c.Parse("help", app.Name); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := buf.Bytes(); !bytes.Contains(got, []byte(app.Help)) {
+		t.Fatal("full version flag does not output the full version")
 	}
 }

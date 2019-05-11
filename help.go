@@ -21,11 +21,11 @@ func addHelpCommand(c *Command) error {
 		Init: func(set *flag.FlagSet) Initializer {
 			return func(args ...string) error {
 				if len(args) == 0 {
-					Usage()
+					c.fset.Usage()
 					return nil
 				}
 				name := args[0]
-				out := flag.CommandLine.Output()
+				out := fsetOutput(set)
 				for _, sub := range c.subs {
 					if sub.Application.Name != name {
 						continue

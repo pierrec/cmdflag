@@ -8,32 +8,8 @@ package cmdflag
 import (
 	"flag"
 	"fmt"
-	"os"
-	"runtime"
-	"strings"
 	"sync"
 )
-
-// Usage is the function used to display the help message.
-var Usage = func() {
-	fset := flag.CommandLine
-	out := fset.Output()
-
-	program := strings.TrimSuffix(os.Args[0], ".exe")
-	_, _ = fmt.Fprintf(out, "Usage of %s:\n", program)
-	fset.PrintDefaults()
-
-	_, _ = fmt.Fprintf(out, "\nSubcommands:")
-	for _, c := range CommandLine.Commands() {
-		app := c.Application
-		_, _ = fmt.Fprintf(out, "\n%s\n%s %s\n", app.Descr, app.Name, app.Args)
-		fs := flag.NewFlagSet(app.Name, app.Err)
-		fs.PrintDefaults()
-	}
-}
-
-// CommandLine is the top level command.
-var CommandLine Command
 
 type (
 	// Application defines the attributes of a Command.
@@ -51,12 +27,22 @@ type (
 
 	// Command represents a command line command.
 	Command struct {
+		fset *flag.FlagSet
 		mu   sync.Mutex
 		subs []*Command // Commands supported by this command
 
 		Application
 	}
 )
+
+// New instantiates the top level command based on the provided flag set.
+// If no flag set is supplied, then it defaults to flag.CommandLine.
+func New(fset *flag.FlagSet) *Command {
+	if fset == nil {
+		fset = flag.CommandLine
+	}
+	return &Command{fset: fset}
+}
 
 // AddHelp adds a help command to display additional information for commands.
 func (c *Command) AddHelp() error {
@@ -105,7 +91,8 @@ func (c *Command) Commands() []*Command {
 	return c.subs
 }
 
-// Parse parses the command line arguments including the global flags and, if any, the command and its flags.
+// Parse parses the command line arguments from the argument list, which should not include the command name
+// and including the global flags and, if any, the command and its flags.
 //
 // To be called in lieu of flag.Parse().
 //
@@ -113,47 +100,36 @@ func (c *Command) Commands() []*Command {
 // stops.
 // If the FullVersionBoolFlag is defined as a global boolean flag, then the full program version is displayed and
 // the program stops.
-func Parse() error {
-	args := os.Args
-	if len(args) == 1 {
-		return nil
-	}
-
+func (c *Command) Parse(args ...string) error {
 	// Global flags.
-	fset := flag.CommandLine
-	fset.Usage = Usage
+	fset := c.fset
+	if fset.Usage == nil {
+		fset.Usage = usage(c)
+	}
 	out := fsetOutput(fset)
 
-	if err := fset.Parse(args[1:]); err != nil {
+	if err := fset.Parse(args); err != nil {
 		return err
 	}
 
 	// Handle builtin flags.
 	if hasBoolFlag(fset, VersionBoolFlag) {
-		program := strings.TrimSuffix(args[0], ".exe")
-		_, _ = fmt.Fprintf(out, "%s version %s %s/%s\n",
-			program, buildinfo(),
-			runtime.GOOS, runtime.GOARCH)
+		version(out)
 		return nil
 	}
 	if hasBoolFlag(fset, FullVersionBoolFlag) {
-		program := strings.TrimSuffix(args[0], ".exe")
-		_, _ = fmt.Fprintf(out, "%s full version %s %s/%s compiled by %s (%s)\n%s\n",
-			program, buildinfo(),
-			runtime.GOOS, runtime.GOARCH,
-			runtime.Compiler, runtime.Version(),
-			fullbuildinfo())
+		fullversion(out)
 		return nil
 	}
 
 	// Only error on the first level.
-	return run(&CommandLine, args, fset, true)
+	return c.run(args, fset, true)
 }
 
 // run a command and its own ones recursively.
-func run(c *Command, args []string, fset *flag.FlagSet, doerror bool) error {
+func (c *Command) run(args []string, fset *flag.FlagSet, doerror bool) error {
 	// No command.
-	if fset.NArg() == 0 {
+	if fset.NArg() == 0 || len(c.subs) == 0 {
 		return nil
 	}
 
@@ -179,7 +155,7 @@ func run(c *Command, args []string, fset *flag.FlagSet, doerror bool) error {
 			return err
 		}
 		// Next command.
-		return run(sub, args, fs, false)
+		return sub.run(args, fs, false)
 	}
 
 	if doerror {

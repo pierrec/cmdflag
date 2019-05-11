@@ -3,14 +3,13 @@ package cmdflag_test
 import (
 	"flag"
 	"fmt"
-	"os"
-
 	"github.com/pierrec/cmdflag"
 )
 
 func ExampleParse() {
 	// Declare the `split` cmdflag.
-	_, _ = cmdflag.CommandLine.Add(
+	c := cmdflag.New(flag.CommandLine)
+	_, _ = c.Add(
 		cmdflag.Application{
 			Name:  "split",
 			Descr: "splits files into fixed size chunks",
@@ -41,15 +40,8 @@ file2_yy`,
 			},
 		})
 
-	// The following is only used to emulate passing command line arguments to `program`.
-	// It is equivalent to running:
-	// ./program split -s hello
-	args := os.Args
-	defer func() { os.Args = args }()
-	os.Args = []string{"program", "split", "-s", "hello", "&", "@"}
-
-	// Process the command line arguments.
-	if err := cmdflag.Parse(); err != nil {
+	// ./program split -s hello & @
+	if err := c.Parse("split", "-s", "hello", "&", "@"); err != nil {
 		panic(err)
 	}
 
