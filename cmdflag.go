@@ -8,6 +8,7 @@ package cmdflag
 import (
 	"flag"
 	"fmt"
+	"os"
 	"sync"
 )
 
@@ -96,11 +97,15 @@ func (c *Command) Commands() []*Command {
 //
 // To be called in lieu of flag.Parse().
 //
+// If no arguments are supplied, it defaults to os.Args[1:].
 // If the VersionBoolFlag is defined as a global boolean flag, then the program version is displayed and the program
 // stops.
 // If the FullVersionBoolFlag is defined as a global boolean flag, then the full program version is displayed and
 // the program stops.
 func (c *Command) Parse(args ...string) error {
+	if args == nil {
+		args = os.Args[1:]
+	}
 	// Global flags.
 	fset := c.fset
 	if fset.Usage == nil {
