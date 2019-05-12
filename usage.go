@@ -18,6 +18,7 @@ func usage(c *Command) func() {
 			app := c.Application
 			_, _ = fmt.Fprintf(out, "\n%s\n%s %s\n", app.Descr, app.Name, app.Args)
 			fs := flag.NewFlagSet(app.Name, app.Err)
+			_ = app.Init(fs)
 			fs.PrintDefaults()
 		}
 	}
