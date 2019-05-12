@@ -8,7 +8,7 @@ import (
 // usage returns the default function used to display the help message.
 func usage(c *Command) func() {
 	return func() {
-		out := c.fset.Output()
+		out := fsetOutput(c.fset)
 
 		_, _ = fmt.Fprintf(out, "Usage of %s:\n", program())
 		c.fset.PrintDefaults()
