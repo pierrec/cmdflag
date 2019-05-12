@@ -8,6 +8,7 @@ package cmdflag
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"sync"
 )
@@ -33,6 +34,8 @@ type (
 		subs []*Command // Commands supported by this command
 
 		Application
+		// Usage is the function used to display the usage description.
+		Usage func()
 	}
 )
 
@@ -41,6 +44,7 @@ type (
 func New(fset *flag.FlagSet) *Command {
 	if fset == nil {
 		fset = flag.CommandLine
+		fset.Usage = nil // Remove the default usage as it does not know about commands
 	}
 	return &Command{fset: fset}
 }
@@ -92,6 +96,11 @@ func (c *Command) Commands() []*Command {
 	return c.subs
 }
 
+// Output returns the output used for usage. It defaults to os.Stderr.
+func (c *Command) Output() io.Writer {
+	return fsetOutput(c.fset)
+}
+
 // Parse parses the command line arguments from the argument list, which should not include the command name
 // and including the global flags and, if any, the command and its flags.
 //
@@ -106,13 +115,17 @@ func (c *Command) Parse(args ...string) error {
 	if args == nil {
 		args = os.Args[1:]
 	}
-	// Global flags.
 	fset := c.fset
-	if fset.Usage == nil {
+
+	// Usage: use the one supplied to c or its fset, or the default one.
+	if c.Usage != nil {
+		fset.Usage = c.Usage
+	} else if fset.Usage == nil {
 		fset.Usage = usage(c)
 	}
 	out := fsetOutput(fset)
 
+	// Global flags.
 	if err := fset.Parse(args); err != nil {
 		return err
 	}
