@@ -165,6 +165,9 @@ func (c *Command) run(args []string, fset *flag.FlagSet, doerror bool) error {
 		handler := sub.Application.Init(fs)
 		// Command specific arguments.
 		if err := fs.Parse(args); err != nil {
+			if err == flag.ErrHelp {
+				return nil
+			}
 			return err
 		}
 		// Command handler.
