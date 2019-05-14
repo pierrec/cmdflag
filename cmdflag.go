@@ -7,7 +7,6 @@ package cmdflag
 
 import (
 	"flag"
-	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -160,9 +159,9 @@ func (c *Command) run(args []string, fset *flag.FlagSet, doerror bool) error {
 			continue
 		}
 
-		fname := fmt.Sprintf("command `%s`", c.Application.Name)
-		fs := flag.NewFlagSet(fname, sub.Application.Err)
+		fs := flag.NewFlagSet("", sub.Application.Err)
 		fs.SetOutput(out)
+		fs.Usage = usageCommand(out, sub.Application)
 		handler := sub.Application.Init(fs)
 		// Command specific arguments.
 		if err := fs.Parse(args); err != nil {
