@@ -1,0 +1,6 @@
+github.com/lib/pq v1.1.1 h1:sJZmqHoEaY7f+NPP8pgLB/WxulyR3fewgCM2qaSlBb4=
+github.com/lib/pq v1.1.1/go.mod h1:5WUZQaWbwv1U+lTReE5YruASi9Al49XbQIvNi/34Woo=
+github.com/pierrec/cmdflag v0.0.0-20190515120844-14a37df570d0 h1:Dz3+DS7rLnnVtoN6fv+WcmlqfjetIN4DPMXV+M42rNg=
+github.com/pierrec/cmdflag v0.0.0-20190515120844-14a37df570d0/go.mod h1:a3zKGZ3cdQUfxjd0RGMLZr8xI3nvpJOB+m6o/1X5BmU=
+github.com/xo/dburl v0.0.0-20190203050942-98997a05b24f h1:mpE3N7Ao9j/miA6UsIpIsm925lXkff09BVQykBPtP9I=
+github.com/xo/dburl v0.0.0-20190203050942-98997a05b24f/go.mod h1:g6rdekR8vgfVZrkLWfobLTm0kVez7GAN23mWtkGCJ14=
