@@ -396,3 +396,37 @@ func TestHelpCommand(t *testing.T) {
 		t.Fatal("full version flag does not output the full version")
 	}
 }
+
+func TestHelp(t *testing.T) {
+	defer restoreArgs()()
+
+	buf := new(bytes.Buffer)
+	flag.CommandLine.SetOutput(buf)
+
+	c := cmdflag.New(nil)
+	app := cmdflag.Application{
+		Name: "sub",
+		Err:  flag.ContinueOnError,
+		Init: func(fset *flag.FlagSet) cmdflag.Initializer { return nil },
+	}
+	_, err := c.Add(app)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.Parse("-h"); err != flag.ErrHelp {
+		t.Fatalf("got %v; want %v", err, flag.ErrHelp)
+	}
+	if got := buf.Bytes(); !bytes.Contains(got, []byte("Usage")) {
+		t.Fatal("invalid usage")
+	}
+	buf.Truncate(0)
+
+	if err := c.Parse(app.Name, "-h"); err != flag.ErrHelp {
+		t.Fatalf("got %v; want %v", err, flag.ErrHelp)
+	}
+
+	if got := buf.Bytes(); !bytes.Contains(got, []byte("Usage of command")) {
+		t.Fatal("invalid command usage")
+	}
+}
