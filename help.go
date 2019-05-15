@@ -18,7 +18,7 @@ func addHelpCommand(c *Command) error {
 		Name:  HelpCommand,
 		Descr: "display the help for a given command",
 		Args:  "command",
-		Init: func(set *flag.FlagSet) Initializer {
+		Init: func(set *flag.FlagSet) Handler {
 			return func(args ...string) (int, error) {
 				if len(args) == 0 {
 					c.fset.Usage()

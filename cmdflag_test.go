@@ -18,7 +18,7 @@ func restoreArgs() (done func()) {
 func TestCommand_Add(t *testing.T) {
 	defer restoreArgs()()
 
-	ini := func(*flag.FlagSet) cmdflag.Initializer {
+	ini := func(*flag.FlagSet) cmdflag.Handler {
 		return func(s ...string) (int, error) {
 			return 0, nil
 		}
@@ -104,7 +104,7 @@ func TestInvalidCommand(t *testing.T) {
 	c := cmdflag.New(nil)
 	app := cmdflag.Application{
 		Name: "sub1",
-		Init: func(fset *flag.FlagSet) cmdflag.Initializer { return nil },
+		Init: func(fset *flag.FlagSet) cmdflag.Handler { return nil },
 	}
 	_, err := c.Add(app)
 	if err != nil {
@@ -126,7 +126,7 @@ func TestNoCommandSet(t *testing.T) {
 
 func TestOneCommand(t *testing.T) {
 	h := 0
-	handle := func(fset *flag.FlagSet) cmdflag.Initializer {
+	handle := func(fset *flag.FlagSet) cmdflag.Handler {
 		return func(args ...string) (int, error) {
 			h++
 			return 0, nil
@@ -150,7 +150,7 @@ func TestOneCommand(t *testing.T) {
 
 func TestOneCommandOneNestedCommand(t *testing.T) {
 	h1 := 0
-	handle1 := func(fset *flag.FlagSet) cmdflag.Initializer {
+	handle1 := func(fset *flag.FlagSet) cmdflag.Handler {
 		return func(args ...string) (int, error) {
 			h1++
 			return 0, nil
@@ -163,7 +163,7 @@ func TestOneCommandOneNestedCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 	h2 := 0
-	handle2 := func(fset *flag.FlagSet) cmdflag.Initializer {
+	handle2 := func(fset *flag.FlagSet) cmdflag.Handler {
 		return func(args ...string) (int, error) {
 			h2 += 10
 			return 0, nil
@@ -191,7 +191,7 @@ func TestOneCommandOneFlag(t *testing.T) {
 	defer restoreArgs()()
 
 	h1 := 0
-	handle1 := func(fset *flag.FlagSet) cmdflag.Initializer {
+	handle1 := func(fset *flag.FlagSet) cmdflag.Handler {
 		h1++
 
 		var v1 string
@@ -224,7 +224,7 @@ func TestGlobalFlagOneCommand(t *testing.T) {
 	defer restoreArgs()()
 
 	h1 := 0
-	handle1 := func(fset *flag.FlagSet) cmdflag.Initializer {
+	handle1 := func(fset *flag.FlagSet) cmdflag.Handler {
 		h1++
 
 		var v1 string
@@ -261,7 +261,7 @@ func TestGlobalFlagOneCommandOneFlag(t *testing.T) {
 	defer restoreArgs()()
 
 	h1 := 0
-	handle1 := func(fset *flag.FlagSet) cmdflag.Initializer {
+	handle1 := func(fset *flag.FlagSet) cmdflag.Handler {
 		h1++
 
 		var v1 string
@@ -305,7 +305,7 @@ func TestVersion(t *testing.T) {
 	app := cmdflag.Application{
 		Name: "sub",
 		Err:  flag.ExitOnError,
-		Init: func(fset *flag.FlagSet) cmdflag.Initializer { return nil },
+		Init: func(fset *flag.FlagSet) cmdflag.Handler { return nil },
 	}
 	_, err := c.Add(app)
 	if err != nil {
@@ -335,7 +335,7 @@ func TestFullVersion(t *testing.T) {
 	app := cmdflag.Application{
 		Name: "sub",
 		Err:  flag.ExitOnError,
-		Init: func(fset *flag.FlagSet) cmdflag.Initializer { return nil },
+		Init: func(fset *flag.FlagSet) cmdflag.Handler { return nil },
 	}
 	_, err := c.Add(app)
 	if err != nil {
@@ -369,7 +369,7 @@ func TestHelpCommand(t *testing.T) {
 		Name: "sub",
 		Help: "helpcommand",
 		Err:  flag.ExitOnError,
-		Init: func(fset *flag.FlagSet) cmdflag.Initializer { return nil },
+		Init: func(fset *flag.FlagSet) cmdflag.Handler { return nil },
 	}
 	_, err := c.Add(app)
 	if err != nil {
@@ -407,7 +407,7 @@ func TestHelp(t *testing.T) {
 	app := cmdflag.Application{
 		Name: "sub",
 		Err:  flag.ContinueOnError,
-		Init: func(fset *flag.FlagSet) cmdflag.Initializer { return nil },
+		Init: func(fset *flag.FlagSet) cmdflag.Handler { return nil },
 	}
 	_, err := c.Add(app)
 	if err != nil {

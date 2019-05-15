@@ -15,17 +15,17 @@ import (
 type (
 	// Application defines the attributes of a Command.
 	Application struct {
-		Name  string                          // Command name
-		Descr string                          // Short description
-		Args  string                          // Description of the expected arguments
-		Help  string                          // Displayed when used with the help command
-		Err   flag.ErrorHandling              // Arguments error handling
-		Init  func(*flag.FlagSet) Initializer // Initialize the arguments when the command is matched
+		Name  string                      // Command name
+		Descr string                      // Short description
+		Args  string                      // Description of the expected arguments
+		Help  string                      // Displayed when used with the help command
+		Err   flag.ErrorHandling          // Arguments error handling
+		Init  func(*flag.FlagSet) Handler // Initialize the arguments when the command is matched
 	}
 
-	// Initializer is the function called when a matching command is found.
+	// Handler is the function called when a matching command is found.
 	// It returns the number of arguments consumed or an error.
-	Initializer func(args ...string) (int, error)
+	Handler func(args ...string) (int, error)
 
 	// Command represents a command line command.
 	Command struct {
