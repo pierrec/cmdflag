@@ -118,14 +118,14 @@ func (c *Command) Parse(args ...string) error {
 		args = os.Args[1:]
 	}
 	fset := c.fset
+	out := fsetOutput(fset)
 
 	// Usage: use the one supplied to c or its fset, or the default one.
 	if c.Usage != nil {
 		fset.Usage = c.Usage
 	} else if fset.Usage == nil {
-		fset.Usage = usage(c)
+		fset.Usage = usage(out, c)
 	}
-	out := fsetOutput(fset)
 
 	// Global flags.
 	if err := fset.Parse(args); err != nil {
@@ -164,14 +164,11 @@ func (c *Command) run(args []string, fset *flag.FlagSet, doerror bool) error {
 
 		fs := flag.NewFlagSet("", sub.Application.Err)
 		fs.SetOutput(out)
-		fs.Usage = usage(sub)
+		fs.Usage = usage(out, sub)
 		sub.fset = fs
 		handler := sub.Application.Init(fs)
 		// Command specific arguments.
 		if err := fs.Parse(args); err != nil {
-			if err == flag.ErrHelp {
-				return nil
-			}
 			return err
 		}
 		// Command handler.

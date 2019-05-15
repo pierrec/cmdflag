@@ -3,13 +3,12 @@ package cmdflag
 import (
 	"flag"
 	"fmt"
+	"io"
 )
 
 // usage returns the default function used to display the help message.
-func usage(c *Command) func() {
+func usage(out io.Writer, c *Command) func() {
 	return func() {
-		out := fsetOutput(c.fset)
-
 		name := c.Application.Name
 		if c.Application.Init != nil {
 			// Not the program.
