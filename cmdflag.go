@@ -24,7 +24,8 @@ type (
 	}
 
 	// Initializer is the function called when a matching command is found.
-	Initializer func(...string) error
+	// It returns the number of arguments consumed or an error.
+	Initializer func(args ...string) (int, error)
 
 	// Command represents a command line command.
 	Command struct {
@@ -143,20 +144,20 @@ func (c *Command) Parse(args ...string) error {
 	}
 
 	// Only error on the first level.
-	return c.run(args, fset, true)
+	return c.run(0, fset, true)
 }
 
 // run a command and its own ones recursively.
-func (c *Command) run(args []string, fset *flag.FlagSet, doerror bool) error {
+func (c *Command) run(start int, fset *flag.FlagSet, doerror bool) error {
 	// No command.
 	if fset.NArg() == 0 || len(c.subs) == 0 {
 		return nil
 	}
 
 	out := fsetOutput(fset)
-	idx := len(args) - fset.NArg()
-	s := args[idx]
-	args = args[idx+1:]
+	args := fset.Args()[start:]
+	s := args[0]
+	args = args[1:]
 	for _, sub := range c.subs {
 		if sub.Application.Name != s {
 			continue
@@ -172,11 +173,12 @@ func (c *Command) run(args []string, fset *flag.FlagSet, doerror bool) error {
 			return err
 		}
 		// Command handler.
-		if err := handler(args[len(args)-fs.NArg():]...); err != nil {
+		n, err := handler(args[len(args)-fs.NArg():]...)
+		if err != nil {
 			return err
 		}
 		// Next command.
-		return sub.run(args, fs, false)
+		return sub.run(n, fs, false)
 	}
 
 	if doerror {

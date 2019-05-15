@@ -32,10 +32,10 @@ file2_yy`,
 				fs.StringVar(&s, "s", "", "string to be split")
 
 				// Return the handler to be executed when the cmdflag is found.
-				return func(sep ...string) error {
+				return func(sep ...string) (int, error) {
 					i := len(s) / 2
 					fmt.Printf("%s %v %s", s[:i], sep, s[i:])
-					return nil
+					return 1, nil
 				}
 			},
 		})

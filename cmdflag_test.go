@@ -19,8 +19,8 @@ func TestCommand_Add(t *testing.T) {
 	defer restoreArgs()()
 
 	ini := func(*flag.FlagSet) cmdflag.Initializer {
-		return func(s ...string) error {
-			return nil
+		return func(s ...string) (int, error) {
+			return 0, nil
 		}
 	}
 
@@ -127,9 +127,9 @@ func TestNoCommandSet(t *testing.T) {
 func TestOneCommand(t *testing.T) {
 	h := 0
 	handle := func(fset *flag.FlagSet) cmdflag.Initializer {
-		return func(args ...string) error {
+		return func(args ...string) (int, error) {
 			h++
-			return nil
+			return 0, nil
 		}
 	}
 	c := cmdflag.New(nil)
@@ -151,9 +151,9 @@ func TestOneCommand(t *testing.T) {
 func TestOneCommandOneNestedCommand(t *testing.T) {
 	h1 := 0
 	handle1 := func(fset *flag.FlagSet) cmdflag.Initializer {
-		return func(args ...string) error {
+		return func(args ...string) (int, error) {
 			h1++
-			return nil
+			return 0, nil
 		}
 	}
 	c1 := cmdflag.New(nil)
@@ -164,9 +164,9 @@ func TestOneCommandOneNestedCommand(t *testing.T) {
 	}
 	h2 := 0
 	handle2 := func(fset *flag.FlagSet) cmdflag.Initializer {
-		return func(args ...string) error {
+		return func(args ...string) (int, error) {
 			h2 += 10
-			return nil
+			return 0, nil
 		}
 	}
 	app2 := cmdflag.Application{Name: "sub2", Err: flag.ExitOnError, Init: handle2}
@@ -197,11 +197,11 @@ func TestOneCommandOneFlag(t *testing.T) {
 		var v1 string
 		fset.StringVar(&v1, "v1", "val1", "usage1")
 
-		return func(args ...string) error {
+		return func(args ...string) (int, error) {
 			if got, want := v1, "cli1"; got != want {
 				t.Fatalf("got %s; want %s", got, want)
 			}
-			return nil
+			return 0, nil
 		}
 	}
 	c := cmdflag.New(nil)
@@ -230,8 +230,8 @@ func TestGlobalFlagOneCommand(t *testing.T) {
 		var v1 string
 		fset.StringVar(&v1, "v1", "val1", "usage1")
 
-		return func(args ...string) error {
-			return nil
+		return func(args ...string) (int, error) {
+			return 0, nil
 		}
 	}
 	c := cmdflag.New(nil)
@@ -267,11 +267,11 @@ func TestGlobalFlagOneCommandOneFlag(t *testing.T) {
 		var v1 string
 		fset.StringVar(&v1, "v1", "val1", "usage1")
 
-		return func(args ...string) error {
+		return func(args ...string) (int, error) {
 			if got, want := v1, "cli1"; got != want {
 				t.Fatalf("got %s; want %s", got, want)
 			}
-			return nil
+			return 0, nil
 		}
 	}
 	c := cmdflag.New(nil)

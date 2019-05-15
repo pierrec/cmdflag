@@ -19,10 +19,10 @@ func addHelpCommand(c *Command) error {
 		Descr: "display the help for a given command",
 		Args:  "command",
 		Init: func(set *flag.FlagSet) Initializer {
-			return func(args ...string) error {
+			return func(args ...string) (int, error) {
 				if len(args) == 0 {
 					c.fset.Usage()
-					return nil
+					return 0, nil
 				}
 				name := args[0]
 				out := fsetOutput(set)
@@ -32,9 +32,9 @@ func addHelpCommand(c *Command) error {
 					}
 					app := sub.Application
 					_, _ = fmt.Fprintf(out, "%s\n%s %s\n%s\n", app.Descr, app.Name, app.Args, app.Help)
-					return nil
+					return 1, nil
 				}
-				return fmt.Errorf("command %s not found", name)
+				return 1, fmt.Errorf("command %s not found", name)
 			}
 		},
 	}
