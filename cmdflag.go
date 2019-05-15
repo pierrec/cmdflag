@@ -45,7 +45,10 @@ func New(fset *flag.FlagSet) *Command {
 		fset = flag.CommandLine
 		fset.Usage = nil // Remove the default usage as it does not know about commands
 	}
-	return &Command{fset: fset}
+	return &Command{
+		Application: Application{Name: program()},
+		fset:        fset,
+	}
 }
 
 // AddHelp adds a help command to display additional information for commands.
@@ -161,7 +164,8 @@ func (c *Command) run(args []string, fset *flag.FlagSet, doerror bool) error {
 
 		fs := flag.NewFlagSet("", sub.Application.Err)
 		fs.SetOutput(out)
-		fs.Usage = usageCommand(out, sub.Application)
+		fs.Usage = usage(sub)
+		sub.fset = fs
 		handler := sub.Application.Init(fs)
 		// Command specific arguments.
 		if err := fs.Parse(args); err != nil {
