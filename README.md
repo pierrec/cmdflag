@@ -60,8 +60,3 @@ To make life easier, a few common uses of a command line library are provided an
 ## Contributing
 
 Contributions welcome via pull requests. Please provide tests.
-
-## License
-
-MIT.
-

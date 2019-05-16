@@ -6,7 +6,7 @@ import (
 	"github.com/pierrec/cmdflag"
 )
 
-func ExampleParse() {
+func ExampleCommand_Add() {
 	// Declare the `split` cmdflag.
 	c := cmdflag.New(flag.CommandLine)
 	_, _ = c.Add(

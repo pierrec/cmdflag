@@ -1,5 +1,6 @@
 package cmdflag
 
+// Error defines the error type for this package.
 type Error string
 
 func (e Error) Error() string {
