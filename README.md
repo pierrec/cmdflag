@@ -39,7 +39,7 @@ c.Add(cmdflag.Application{
         return func(args ...string) (int, error) {
             fmt.Printf("courses: %v\n", args)
             fmt.Printf("toppings: %v\n", strings.Split(toppings, ","))
-            return nil
+            return len(args), nil
         }
     }
 }

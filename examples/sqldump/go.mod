@@ -1,4 +1,4 @@
-module github.com/pierrec/cmdflag/examples/db
+module github.com/pierrec/cmdflag/examples/sqldump
 
 go 1.12
 
