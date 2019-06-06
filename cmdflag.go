@@ -57,6 +57,14 @@ func (c *Command) AddHelp() error {
 	return addHelpCommand(c)
 }
 
+// MustAddHelp is similar to AddHelp but panics if an error is encountered.
+func (c *Command) MustAddHelp() {
+	err := addHelpCommand(c)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // Add adds a new command with its name and description and returns the new command.
 //
 // It is safe to be called from multiple go routines (typically in init functions).
